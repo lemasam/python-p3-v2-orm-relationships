@@ -8,7 +8,7 @@ class Employee:
     # Dictionary of objects saved to the database.
     all = {}
 
-    def __init__(self, name, job_title,department_id, id=None):
+    def __init__(self, name, job_title, department_id, id=None):
         self.id = id
         self.name = name
         self.job_title = job_title
@@ -16,8 +16,8 @@ class Employee:
 
     def __repr__(self):
         return (
-            f"<Employee {self.id}: {self.name}, {self.job_title}>"+ 
-            f"Department ID:{self.department_id}"
+            f"<Employee {self.id}: {self.name}, {self.job_title}, " +
+            f"Department ID: {self.department_id}>"
         )
 
     @classmethod
@@ -27,9 +27,9 @@ class Employee:
             CREATE TABLE IF NOT EXISTS employees (
             id INTEGER PRIMARY KEY,
             name TEXT,
-            job_title TEXT),
+            job_title TEXT,
             department_id INTEGER,
-            FOREIGN KEY(department_id) REFERENCES department(id))
+            FOREIGN KEY (department_id) REFERENCES departments(id))
         """
         CURSOR.execute(sql)
         CONN.commit()
@@ -44,11 +44,11 @@ class Employee:
         CONN.commit()
 
     def save(self):
-        """ Insert a new row with the name and job title values of the current Employee object.
+        """ Insert a new row with the name, job title, and department id values of the current Employee object.
         Update object id attribute using the primary key value of new row.
         Save the object in local dictionary using table row's PK as dictionary key"""
         sql = """
-                INSERT INTO employees (name, job_title,department_id)
+                INSERT INTO employees (name, job_title, department_id)
                 VALUES (?, ?, ?)
         """
 
@@ -62,10 +62,11 @@ class Employee:
         """Update the table row corresponding to the current Employee instance."""
         sql = """
             UPDATE employees
-            SET name = ?, job_title = ?, department_id= ?
+            SET name = ?, job_title = ?, department_id = ?
             WHERE id = ?
         """
-        CURSOR.execute(sql, (self.name, self.job_title, self.department_id, self.id))
+        CURSOR.execute(sql, (self.name, self.job_title,
+                             self.department_id, self.id))
         CONN.commit()
 
     def delete(self):
@@ -87,9 +88,9 @@ class Employee:
         self.id = None
 
     @classmethod
-    def create(cls, name, job_title,department_id):
+    def create(cls, name, job_title, department_id):
         """ Initialize a new Employee instance and save the object to the database """
-        employee = cls(name, job_title,department_id)
+        employee = cls(name, job_title, department_id)
         employee.save()
         return employee
 
@@ -103,10 +104,10 @@ class Employee:
             # ensure attributes match row values in case local instance was modified
             employee.name = row[1]
             employee.job_title = row[2]
-            employee.department_id =row[3]
+            employee.department_id = row[3]
         else:
             # not in dictionary, create new instance and add to dictionary
-            employee = cls(row[1], row[2])
+            employee = cls(row[1], row[2], row[3])
             employee.id = row[0]
             cls.all[employee.id] = employee
         return employee
@@ -124,6 +125,18 @@ class Employee:
         return [cls.instance_from_db(row) for row in rows]
 
     @classmethod
+    def find_by_id(cls, id):
+        """Return Employee object corresponding to the table row matching the specified primary key"""
+        sql = """
+            SELECT *
+            FROM employees
+            WHERE id = ?
+        """
+
+        row = CURSOR.execute(sql, (id,)).fetchone()
+        return cls.instance_from_db(row) if row else None
+
+    @classmethod
     def find_by_name(cls, name):
         """Return Employee object corresponding to first table row matching specified name"""
         sql = """
@@ -135,15 +148,3 @@ class Employee:
         row = CURSOR.execute(sql, (name,)).fetchone()
         return cls.instance_from_db(row) if row else None
 
-
-    @classmethod
-    def find_by_id(cls, id):
-        
-        sql = """
-            SELECT *
-            FROM employees
-            WHERE id = ?
-        """
-
-        row = CURSOR.execute(sql, (id,)).fetchone()
-        return cls.instance_from_db(row) if row else None
